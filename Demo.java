@@ -1,93 +1,120 @@
-/* import java.sql.Connection;
+import java.sql.Connection;
+import java.sql.DriverManager;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
-import java.util.ArrayList;
 import java.util.Scanner;
 
+
 public class Demo {
-   
-    DatabaseConnecting dbConnection = new DatabaseConnecting();
     public static void main(String[] args) {
-        Integer id;
-        String firstName;
-        String lastName;
-        String email;
-        String password;
-        Boolean isDoctor;
-        int option = 0;
-        Scanner in = new Scanner(System.in);
+        Scanner scanner = new Scanner(System.in);
 
-        while(option !=-1) {
-            System.out.println("Enter id: ");
-            id = in.nextInt();
-            System.out.println("Enter first name: ");
-            firstName = in.nextLine();
-            System.out.println("Enter last name: ");
-            lastName = in.nextLine();
-            System.out.println("Enter email: ");
-            email = in.nextLine();
-            System.out.println("Enter password: ");
-            password = in.nextLine();
-            System.out.println("Are you a doctor?");
-            isDoctor = in.nextBoolean();
-            User p = new User(id,firstName,lastName,email,password,isDoctor);
-            option = in.nextInt();
-            in.nextLine();
-        }
-    
-        ReadDB();
+        Connection connection = connectToDatabase();
 
-    }
+        boolean loggedIn = false;
+        while (!loggedIn) {
+            System.out.println("1. Create Account");
+            System.out.println("2. Log In");
+            System.out.print("Enter your choice (1 or 2): ");
+            int choice = scanner.nextInt();
+            scanner.nextLine();
 
-    public static void ReadDB() {
-        ArrayList<User> UserList = new ArrayList<>();
-        String query = "SELECT * FROM public.\"User\"";
-        try {
-            Connection con = DatabaseConnecting.getCon();
-            PreparedStatement statement = con.prepareStatement(query);
-            ResultSet rs = statement.executeQuery();
-
-            while(rs.next()) {
-                User p = new User(2, query, query, query, query, false);
-                p.setId(rs.getInt(1));
-                p.setFirstName(rs.getString("firstName"));
-                p.setLastName(rs.getString("lastName"));
-                p.setEmail(rs.getString("email"));
-                p.setPassword(rs.getString("password"));
-                p.setDoctor(rs.getBoolean("false"));
-                UserList.add(p);
+            switch (choice) {
+                case 1:
+                    createUserAccount(connection, scanner);
+                    break;
+                case 2:
+                    loggedIn = logIn(connection, scanner);
+                    break;
+                default:
+                    System.out.println("Invalid choice. Please select 1 or 2.");
             }
         }
-            catch(SQLException e) {
-                e.printStackTrace();
-            }
 
-            for(int i = 0;i<UserList.size();i++) {
-                System.out.println(UserList.get(i).toString());
-            }
+
+        scanner.close();
+        closeDatabaseConnection(connection);
     }
-    public static void InsertRecord(User p) {
-    
-        User p1 = new User(1, "Ethan", "Miller", "example12@email.com", "Grape", false);
 
-        String query = "INSERT INTO public.\"User\"(id,firstName,lastName,email,password,isDoctor) " + "Values (?,?,?,?,?,?)";
+    private static Connection connectToDatabase() {
+        String jdbcURL = "jdbc:postgresql://localhost:5432/Java-Final-Sprint";
+        String username = "postgres";
+        String password = "Amazing@2334";
 
         try {
-            Connection con = DatabaseConnecting.getCon();
-            PreparedStatement statement = con.prepareStatement(query);
-            statement.setInt(1, p1.getId());
-            statement.setString(2,p1.getFirstName());
-            statement.setString(3, p1.getLastName());
-            statement.setString(4, p1.getEmail());
-            statement.setString(5, p1.getPassword());
-            statement.setBoolean(6, p1.isDoctor());
-            int updateRow = statement.executeUpdate();
-            
+            return DriverManager.getConnection(jdbcURL, username, password);
+        } catch (SQLException e) {
+            e.printStackTrace();
+            return null;
+        }
+    }
+
+
+    private static void createUserAccount(Connection connection, Scanner scanner) {
+        System.out.println("\nCreate User Account: ");
+        System.out.print("Enter username: ");
+        String username = scanner.nextLine();
+        System.out.print("Enter password: ");
+        String password = scanner.nextLine();
+        System.out.print("Enter first name: ");
+        String firstName = scanner.nextLine();
+        System.out.print("Enter last name: ");
+        String lastName = scanner.nextLine();
+        System.out.print("Enter email: ");
+        String email = scanner.nextLine();
+        System.out.print("Enter access level (1 for read-only, 2 for read-write, etc.): ");
+        int accessLevel = scanner.nextInt();
+
+        String sql = "INSERT INTO public.\"User\" (username, password, first_name, last_name, email, access_level) VALUES (?, ?, ?, ?, ?, ?)";
+        try (PreparedStatement preparedStatement = connection.prepareStatement(sql)) {
+            preparedStatement.setString(1, username);
+            preparedStatement.setString(2, password);
+            preparedStatement.setString(3, firstName);
+            preparedStatement.setString(4, lastName);
+            preparedStatement.setString(5, email);
+            preparedStatement.setInt(6, accessLevel);
+            preparedStatement.executeUpdate();
+            System.out.println("User account created successfully!");
         } catch (SQLException e) {
             e.printStackTrace();
         }
     }
-    }
- */
 
+    private static boolean logIn(Connection connection, Scanner scanner) {
+        System.out.println("\nLog In: ");
+        System.out.print("Enter username: ");
+        String username = scanner.nextLine();
+        System.out.print("Enter password: ");
+        String password = scanner.nextLine();
+
+        String sql = "SELECT COUNT(*) FROM public.\"User\" WHERE username = ? AND password = ?";
+        try (PreparedStatement preparedStatement = connection.prepareStatement(sql)) {
+            preparedStatement.setString(1, username);
+            preparedStatement.setString(2, password);
+            ResultSet resultSet = preparedStatement.executeQuery();
+            resultSet.next();
+            int count = resultSet.getInt(1);
+            if (count > 0) {
+                System.out.println("Login successful!");
+                return true;
+            } else {
+                System.out.println("Invalid username or password. Please try again.");
+                return false;
+            }
+        } catch (SQLException e) {
+            e.printStackTrace();
+            return false;
+        }
+    }
+
+    private static void closeDatabaseConnection(Connection connection) {
+        try {
+            if (connection != null) {
+                connection.close();
+            }
+        } catch (SQLException e) {
+            e.printStackTrace();
+        }
+    }
+}

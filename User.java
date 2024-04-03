@@ -8,7 +8,7 @@ public class User {
     private String password;
     private boolean isDoctor;
 
-    public User(int id, String firstName, String lastName, String email, String password, boolean isDoctor) {
+    public User(int id, String query, String firstName, String lastName, String email, boolean isDoctor) {
         this.id = id;
         this.firstName = firstName;
         this.lastName = lastName;
@@ -64,6 +64,5 @@ public class User {
     public void setDoctor(boolean doctor) {
         isDoctor = doctor;
     }
-
-   
 }
+
